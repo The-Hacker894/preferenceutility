@@ -1,0 +1,12 @@
+Package: xyz.skylarmccauley.preferenceutility
+Name: preferenceutility
+Version: 0.1
+Depends: firmware (>= 9.0), findutils, rsync, gawk, zip, unzip
+Architecture: iphoneos-arm
+Description: The all-in-one utility for backing up and restoring your preferences. Run prefutility in MobileTerminal, NewTerm2, or over SSH.
+Maintainer: TheHacker
+Homepage: https://skylarmccauley.xyz/
+Depiction: http://skylarmccauley.xyz/hacked-repo/depic/xyz.skylarmccauley.preferenceutility/
+SileoDepiction: https://skylarmccauley.xyz/hacked-repo/depic/xyz.skylarmccauley.preferenceutility/sileo.json
+Author: TheHacker
+Section: Utilities

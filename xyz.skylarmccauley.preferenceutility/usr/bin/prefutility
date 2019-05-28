@@ -1,0 +1,173 @@
+#!/bin/sh
+
+clear
+VER="0.1"
+echo "preferenceutility v$VER"
+
+RED='\033[31m'
+GREEN='\033[32m'
+YELLOW='\033[1;33m'
+STD='\033[0;0;39m'
+
+PREFUTILDIR="/preferenceutility"
+PREFSDIR="/private/var/mobile/Library/Preferences"
+
+DATE=$(date +%m-%d-%Y)
+PREFBACKUPZIP="$PREFUTILDIR/prefbackup-$DATE.zip"
+PBZRELATIVE="./prefbackup-$DATE.zip"
+
+pause(){ 
+    read -p "Press [Enter] to continue..." fackEnterKey 
+    }
+coming_soon(){ 
+    read -p "This feature is coming soon. Press [Enter/Return] to continue" fackEnterKey 
+}
+cleanup() {
+    rm -fv $PREFUTILDIR/packages.list
+    rm -rfv $PREFUTILDIR/prefbackup
+}
+init() {
+    if [ ! -d $PREFUTILDIR ]; then
+        mkdir $PREFUTILDIR
+    fi
+}
+backup_all_prefs() {
+    init
+    cleanup
+    echo "Querying install packages..."
+    dpkg-query -f '${binary:Package}\n' -W > $PREFUTILDIR/packages.list
+    cat $PREFUTILDIR/packages.list | sed 's/^st\^/\n\0/g'
+    echo "Queried!"
+    echo "Preparing for backup..."
+    cd $PREFUTILDIR
+    mkdir prefbackup
+    cd prefbackup
+    mkdir prefs
+    cd prefs
+    echo "Beginning backup..."
+    while read -r line; do
+    # Reading each line
+
+    echo "Copying $line ..."
+
+    rsync -aP --exclude="com.apple*" --exclude="nfcd.plist" --exclude="TVRemoteConnectionService.plist" --exclude="UITextInputContextIdentifiers.plist" --exclude="Wallpaper.png" --exclude=".*" "$PREFSDIR/" ./
+    
+    done < ../../packages.list
+    cd /preferenceutility/prefbackup
+    rm -rv *com.apple*
+    rm -rv nfcd.plist
+    rm -rv ckkeyrolld.plist
+    rm -rv TVRemoteConnectionService.plist
+    rm -rv UITextInputContextIdentifiers.plist
+    rm -rv Wallpaper.png
+    rm -rv .G*
+    
+    cd $PREFUTILDIR/prefbackup
+    cp -v /preferenceutility/data/restore.sh ./
+    cd $PREFUTILDIR
+    zip -r9 $PBZRELATIVE ./prefbackup
+    echo "Cleaning up..."
+    cleanup
+    echo "Finished backing up Tweak Preferences! You can find it at $PREFBACKUPZIP"
+    pause
+    main_menu
+}
+restore_all_prefs() {
+    cd $PREFUTILDIR
+    ls ./prefbackup-*.zip
+    echo "Enter the date of which backup you would like to restore: (Type 'exit' to leave.)"
+        read backupDate
+
+        BACKUPTOUNZIP="$PREFUTILDIR/prefbackup-$backupDate.zip"
+        BTURELATIVE="./prefbackup-$backupDate.zip"
+        if [[ "$backupDate" = 'exit' || "$backupDate" = 'leave' || "$backupDate" = "cancel" || "$backupDate" = "stop" ]]; then
+        main_menu
+        fi
+    if [ ! -w $BTURELATIVE ]; then
+        echo "$BTURELATIVE does not exist!"
+        pause
+        main_menu
+    fi
+    echo "Copying Backup to $PREFUTILDIR/tmp for contingency..."
+    mkdir $PREFUTILDIR/tmp
+    cp -fv $BTURELATIVE $PREFUTILDIR/tmp
+    echo "Checking r/w permissions needed for restore..."
+    if [ ! -w $PREFSDIR ]; then
+        echo "Cannot read $PREFSDIR. Try running as root?"
+        pause
+        main_menu
+    fi
+    unzip -o $BTURELATIVE
+    cp -afv "./prefbackup/prefs/." "$PREFSDIR/"
+    rm -rfv ./prefbackup
+    echo "Finished restoring backup! If the backup didn't restore correctly, you can find it in $PREFSDIR/tmp"
+    pause
+    read -p "Would you like to Respring? [Y/N]" -n 1 -r
+        echo
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            echo "Killing SpringBoard..."
+            sbreload || killall SpringBoard
+        else
+        main_menu
+        fi
+    
+}
+
+help_m() {
+    echo ""
+    echo ""
+    echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+    echo "preferenceutility HELP"
+    echo ""
+    echo ""
+    echo "Backup All Tweak Preferences -- Backs up all Tweak Preferences"
+    echo ""
+    echo "Restore All Tweak Preferences -- Restores all Tweak Preferences from Backup"
+    echo ""
+    echo "Help -- Shows this message"
+    echo ""
+    echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+    pause
+}
+# Main Menu
+show_main_men() {
+	clear
+    echo ""
+    echo ""
+	echo ""
+    echo ""
+    echo ""
+    echo ""
+	echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"	
+	echo " preferenceutility ${VER} by TheHacker "
+    echo ""
+    echo "~~ Main Menu ~~"
+	echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+	echo "1. Backup All Tweak Preferences"
+    echo "2. Restore All Tweak Preferences"
+    echo "3. Help"
+	echo "0. Exit"
+    echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+}
+read_main_opt(){
+	local choice
+	read -p "Enter choice [ 0 - 3 ] " choice
+	case $choice in
+		1) backup_all_prefs ;;
+        2) restore_all_prefs ;;
+        3) help_m ;;
+        
+        0) exit 0;;
+		*) echo -e "${RED}Invalid Option...${STD}" && sleep 2
+	esac
+}
+
+main_menu() {
+    cd /
+    show_main_men
+    read_main_opt
+}
+while true
+do
+        main_menu
+done
